@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>测测你的专属 ZJUTI</title>
+    <style>
+        /* --- 基础样式设计（贴合微信阅读习惯） --- */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f6f9; /* 浅灰偏蓝背景，干净清爽 */
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px; /* 适配手机屏幕 */
+            padding: 30px 20px;
+            box-sizing: border-box;
+            background: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
+
+        /* 隐藏元素的通用类 */
+        .hidden { display: none !important; }
+
+        /* --- 首页样式 --- */
+        #start-screen { text-align: center; }
+        .title { font-size: 26px; font-weight: bold; margin-bottom: 15px; color: #003f88; /* 浙大蓝 */ letter-spacing: 1px;}
+        .subtitle { font-size: 15px; color: #666; margin-bottom: 50px; line-height: 1.6;}
+        .start-btn {
+            background-color: #003f88;
+            color: white;
+            border: none;
+            padding: 16px 50px;
+            font-size: 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 6px 12px rgba(0, 63, 136, 0.2);
+            transition: 0.2s;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .start-btn:active { transform: scale(0.95); box-shadow: 0 2px 6px rgba(0, 63, 136, 0.2);}
+
+        /* --- 答题页样式 --- */
+        #question-screen { width: 100%; animation: fadeIn 0.5s ease; }
+        .progress { font-size: 14px; color: #999; margin-bottom: 25px; text-align: center; font-weight: bold;}
+        .question-text { font-size: 18px; font-weight: bold; margin-bottom: 35px; line-height: 1.6; color: #222;}
+        .option-btn {
+            display: block;
+            width: 100%;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            color: #444;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            line-height: 1.5;
+        }
+        .option-btn:active { background-color: #e2e6ea; border-color: #dae0e5; transform: scale(0.98);}
+
+        /* --- 结果页样式 --- */
+        #result-screen { text-align: center; width: 100%; animation: fadeIn 0.8s ease;}
+        .result-tip { font-size: 15px; color: #003f88; margin-bottom: 20px; font-weight: bold; animation: pulse 2s infinite;}
+        #result-image {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* 简单动画 */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="start-screen">
+            <div class="title">解锁你的“ZJUTI”</div>
+            <div class="subtitle">百年求是，你是校园里的哪一道风景？<br>完成 20 道灵魂测试，遇见真实的自己。</div>
+            <button class="start-btn" onclick="startQuiz()">开始测试</button>
+        </div>
+
+        <div id="question-screen" class="hidden">
+            <div class="progress" id="progress-text">1 / 20</div>
+            <div class="question-text" id="question-text">问题加载中...</div>
+            <div id="options-container">
+                </div>
+        </div>
+
+        <div id="result-screen" class="hidden">
+            <div class="result-tip">👇 长按保存下方专属海报，分享此刻👇</div>
+            <img id="result-image" src="" alt="你的测试结果正在生成...">
+        </div>
+    </div>
+
+    <script>
+        // --- 核心数据配置区 ---
+
+        // 1. 初始化 9 种人格的分数池
+        let scores = {
+            WISER: 0, WILD: 0, CHAT: 0, SOUL: 0, TASTE: 0,
+            ARTIST: 0, GLOW: 0, ANGEL: 0, LINK: 0
+        };
+
+        // 2. 配置结果海报图片路径 (注意确保你的图片名与这里一致)
+        const resultImages = {
+            WISER: "img/wiser.png",
+            WILD: "img/wild.png",
+            CHAT: "img/chat.png",
+            SOUL: "img/soul.png",
+            TASTE: "img/taste.png",
+            ARTIST: "img/artist.png",
+            GLOW: "img/glow.png",
+            ANGEL: "img/angel.png",
+            LINK: "img/link.png"
+        };
+
+       // 3. 题库：20题完整版（已交叉打乱顺序，并添加固定序号）
+        const questions = [
+            {
+                question: "1. 偶然走进一家开在隐秘角落的旧物杂货铺，老板说你可以带走一样东西。你的目光最先被什么吸引？",
+                options: [
+                    { text: "一本没有封皮的厚重笔记，里面写满了前人密密麻麻的批注与思考。", scores: { WISER: 2, LINK: 1 } },
+                    { text: "一套看起来很有年代感的陶瓷茶具，釉色温润。", scores: { TASTE: 1, ARTIST: 1 } },
+                    { text: "一台有些积灰的老式唱片机，旁边散落着几张黑胶唱片。", scores: { SOUL: 2, ARTIST: 1 } },
+                    { text: "一张泛黄的手绘老地图，上面标注着一些现在已经不存在的地名。", scores: { WILD: 2, WISER: 1 } }
+                ]
+            },
+            {
+                question: "2. 接近晚上十点半，寝室（或自习室）突然意外停电，周围瞬间陷入一片黑暗与短暂的安静。你的第一反应通常是？",
+                options: [
+                    { text: "正好还没到打卡截止时间，去操场打完卡回来说不定就好了。", scores: { GLOW: 2 } },
+                    { text: "摸黑翻出手机，第一时间打开论坛或群聊，看看全校情况。", scores: { LINK: 2, CHAT: 1 } },
+                    { text: "问问室友有没有充电宝，打开小台灯或手机手电筒。", scores: { ANGEL: 2, CHAT: 1 } },
+                    { text: "那就早点休息叭~", scores: { SOUL: 2, CHAT: -1 } }
+                ]
+            },
+            {
+                question: "3. 如果要把你的校园生活剪辑成一部没有画面的“声音纪录片”，最不可或缺的背景音是？",
+                options: [
+                    { text: "很多人声的交织，比如大课间走廊上的喧闹，或聚餐时的笑声。", scores: { CHAT: 2, SOUL: -1 } },
+                    { text: "单调但让人心安的声音，比如笔尖划过纸张的沙沙声。", scores: { SOUL: 2, CHAT: -0.5 } },
+                    { text: "风穿过树叶的白噪音，或者是踩在秋天干燥落叶上的碎裂声。", scores: { WILD: 2, ARTIST: 1 } },
+                    { text: "清晰的节拍声，比如篮球砸向地面的回弹，或演出的鼓点。", scores: { GLOW: 1, ARTIST: 1 } }
+                ]
+            },
+            {
+                question: "4. 如果你的内在能量是一种自然现象，你觉得它更接近于：",
+                options: [
+                    { text: "润物细无声，能在干涸时带来生机的绵绵春雨。", scores: { ANGEL: 1, SOUL: 1 } },
+                    { text: "充满爆发力、能瞬间照亮夜空的雷电交加。", scores: { GLOW: 2, CHAT: 1 } },
+                    { text: "极致纯粹、能穿透一切迷雾的凛冽冬日晨霜。", scores: { SOUL: 1, ARTIST: 0.5 } },
+                    { text: "随遇而安、不断变换方向的温和秋风。", scores: { WILD: 1, ANGEL: 0.5 } }
+                ]
+            },
+            {
+                question: "5. 下午的课突然被通知取消，你意外获得了一段长达三小时的空白时间，你会如何填补它？",
+                options: [
+                    { text: "决定去打卡那家一直想去但平时排队太长的校园周边宝藏小吃店。", scores: { TASTE: 2.5 } },
+                    { text: "漫无目的地走向一个平时很少去的校区角落，看看会遇见什么风景。", scores: { WILD: 1, SOUL: 0.5 } },
+                    { text: "问问同样没课的朋友出来拼局，运动或娱乐。", scores: { GLOW: 0.5, CHAT: 2 ,SOUL: -1} },
+                    { text: "找一个安静的角落，戴上耳机，整理最近收集的灵感或写点东西。", scores: { ARTIST: 1, SOUL: 1 } }
+                ]
+            },
+            {
+                question: "6. 如果将“安全感”或“舒适”转化为一种触觉体验，你觉得它是：",
+                options: [
+                    { text: "刚从阳光下收进来的、带着一点粗糙感但极其厚实的针织毯。", scores: { WILD: 1 } },
+                    { text: "拿着一支顺滑无比的笔，在一张阻尼感刚刚好的纸上流畅书写。", scores: { ARTIST: 1, WISER: 1 } },
+                    { text: "双手轻轻揉捏一只温热、柔软、充满活力的小猫。", scores: { ANGEL: 1, SOUL: 0.5 } },
+                    { text: "在沮丧时，来自朋友、爱人或家人的一个拥抱。", scores: { ANGEL: 1, SOUL: -0.5 } }
+                ]
+            },
+            {
+                question: "7. 以下四个抽象的几何图形，哪一个最让你感到舒适或被吸引？",
+                options: [
+                    { text: "严丝合缝、无限向内收缩的黄金比例螺旋。", scores: { WISER: 1, SOUL: 0.5 } },
+                    { text: "向四面八方无规则发散、充满活力的星芒。", scores: { CHAT: 1, TASTE: 1 } },
+                    { text: "没有棱角、柔和起伏且没有尽头的波浪线。", scores: { WILD: 1 } },
+                    { text: "极其稳固、重心低沉且封闭的完美球体。", scores: { SOUL: 1 } }
+                ]
+            },
+            {
+                question: "8. 毕业季或期末搬寝室，在兵荒马乱的打包现场，你通常是哪种状态？",
+                options: [
+                    { text: "翻出旧物时被细节吸引，忍不住开始给舍友重温这些物件背后的故事。", scores: { CHAT: 1, ARTIST: 0.5 } },
+                    { text: "早就列好了完美的打包清单，甚至对比了三家快递公司的性价比。", scores: { LINK: 2, WISER: 0.5 } },
+                    { text: "留到最后，默默帮大家检查有没有遗漏物品，坐在椅子上回味以往的故事。", scores: { ANGEL: 2, SOUL: 1 } },
+                    { text: "看着空荡荡的房间，构思如何用这些旧物在新宿舍布置出一片新天地。", scores: { ARTIST: 2, WILD: 1 } }
+                ]
+            },
+            {
+                question: "9. 什么样的味觉层次，最能代表你心目中“完美的一天”？",
+                options: [
+                    { text: "初尝平淡，但回味绵长、让人忍不住反复咀嚼的醇厚甘甜。", scores: { TASTE: 0.5, SOUL: 0.5 } },
+                    { text: "像碳酸气泡在舌尖炸开，清新、明快且充满活力的酸甜果味。", scores: { TASTE:0.5, GLOW: 0.5 } },
+                    { text: "入口苦涩，但融化后带着丰富层次和香气的茶香味。", scores: { GLOW: 0.5, TASTE: 1 } },
+                    { text: "极致清爽、能瞬间让大脑清醒并打起精神的薄荷冰感。", scores: { TASET: 0.5, SOUL: 0.5 } }
+                ]
+            },
+            {
+                question: "10. 桌上有四瓶来历不明的“魔法药水”，仅凭外观，你会选择喝下：",
+                options: [
+                    { text: "沸腾着气泡、呈现出耀眼亮橙色的液体，看起来充满了能量。", scores: { GLOW: 1, CHAT: 1 } },
+                    { text: "随着光线角度不同，一直在变幻颜色的神秘液体。", scores: { LINK: 1, ARTIST: 1 } },
+                    { text: "粘稠的、散发着类似焦糖和热牛奶混合香气的金黄色糖浆。", scores: { TASTE: 2  } },
+                    { text: "绝对透明、甚至能感受到丝丝凉意，像冰川水一样纯净的液体。", scores: { SOUL: 1, WISER: 1 } }
+                ]
+            },
+            {
+                question: "11. 走在校园里，你偶然在某个地方看到一个没有贴标签的 U 盘。你的本能想法是？",
+                options: [
+                    { text: "进行意念时间回溯，想象这个U盘在这里的来龙去脉。", scores: { WISER: 1, LINK: 2 } },
+                    { text: "拍张照片发在各大社交平台和寝室群里，广撒网寻找线索。", scores: { ANGEL: 1, LINK: 2 } },
+                    { text: "把它静静地放在最显眼的位置，也许失主正焦急地原路返回寻找。", scores: { SOUL: 1  } },
+                    { text: "这不是我的，我还是不动它为好。", scores: { ANGEL: -1, SOUL: 1 } }
+                ]
+            },
+            {
+                question: "12. 别人递给你一个全新的笔记本，你最偏爱它的封面材质是：",
+                options: [
+                    { text: "柔软、有使用痕迹的复古皮革，像一位懂你的老友。", scores: { SOUL: 1, CHAT: 0.5 } },
+                    { text: "色彩明快、触感奇特的编织布面，拿在手里就有好心情。", scores: { ANGEL:0.5, ARTIST: 1 } },
+                    { text: "极简、防水、耐磨的科技材质，随时随地都能掏出来用。", scores: { LINK: 1 } },
+                    { text: "带有隐约网格线、内页纸张极薄且克数极高的特种纸。", scores: { WISER: 0.5 } }
+                ]
+            },
+            {
+                question: "13. 以下哪一种气味，或许能激起属于你的“普鲁斯特效应”？",
+                options: [
+                    { text: "拆开新书时那种带着油墨的味道。", scores: { LINK: 1, WISER: 1 } },
+                    { text: "冬日夜晚，从小推车里飘出来的、裹挟着孜然或黄油的浓烈香气。", scores: { TASTE: 2 } },
+                    { text: "暴雨过后，泥土、青草和沥青混合在一起的那种潮湿的“土腥味”。", scores: { WILD: 2 } },
+                    { text: "在剧烈运动过后，喉腔中带有血腥味的空气。", scores: { GLOW: 2, WILD: 1 } }
+                ]
+            },
+            {
+                question: "14. 在一件旧大衣的口袋里摸到一把生锈的钥匙，你直觉它能打开什么？",
+                options: [
+                    { text: "一扇通往学校废弃天台的门，那里可以俯瞰整个校园。", scores: { WILD: 2 } },
+                    { text: "一本极其私密的、封存着多年前心绪的日记本上的锁。", scores: { SOUL: 2, ARTIST: 1 } },
+                    { text: "一座孤岛上，堆满金银珠宝、古世纪珍藏的藏宝室。", scores: { TASTE: 0.5, ARTIST: 0.5 } },
+                    { text: "一间藏有大量失落档案和尘封旧闻的隐秘档案室。", scores: { LINK: 2, WISER: 1 } }
+                ]
+            },
+            {
+                question: "15. 准备搭乘校车去另一个校区，却被告知车辆抛锚需要晚点 15 分钟，此时你会？",
+                options: [
+                    { text: "顺其自然，刚好借着这段时间看看周围的人群与窗外的景象。", scores: { WILD: 1  } },
+                    { text: "觉得干等着太无聊，转头和旁边同样在等车的陌生同学吐槽或者搭话。", scores: { CHAT: 2, ANGEL: 1 } },
+                    { text: "从包里摸出一本小书，或者打开手机里的阅读或短视频 App 沉浸进去。", scores: { WISER: 1, SOUL: 1 } },
+                    { text: "看看有没有急着赶去考试或面试的同学，主动帮他们规划拼车路线。", scores: { ANGEL: 2, LINK: 1 } }
+                ]
+            },
+            {
+                question: "16. 当你感到焦虑时，以下哪种“视觉画面”最能帮你瞬间平静下来？",
+                options: [
+                    { text: "盯着一束穿透窗户的阳光，看空气中细小的灰尘在其中缓慢起舞。", scores: { SOUL: 2, WILD: 1,  ARTIST: 0.5} },
+                    { text: "看着原本混乱的表格或文件，被一个个重新排列整齐、归档分类。", scores: { LINK: 2, WISER: 1 } },
+                    { text: "极度专注地凝视一个微小物体，直到周围所有的背景都慢慢虚化。", scores: { ARTIST: 1 } },
+                    { text: "看着一滴水墨落入宣纸，边缘逐渐晕染、散开、最终与纸张融为一体。", scores: { ARTIST: 0.5, SOUL: 0.5 } }
+                ]
+            },
+            {
+                question: "17. 选一张明信片寄给十年后的自己，你会选择怎样的画面？",
+                options: [
+                    { text: "一幅笔触狂野、色彩碰撞强烈的抽象水彩画。", scores: { ARTIST:0.5, GLOW: 1 } },
+                    { text: "一张定格了人声鼎沸、烟火气十足的街头节庆纪实摄影。", scores: { CHAT: 2, TASTE: 1 } },
+                    { text: "茫茫大海上，一座孤独但依然亮着微光的灯塔。", scores: { SOUL: 2, CHAT: -1, ANGEL: -1} },
+                    { text: "盘根错节的古树，阳光透过密集的树冠洒下斑驳的影子。", scores: { WILD: 2, ANGEL: 1 } }
+                ]
+            },
+            {
+                question: "18. 如果你是一座庞大植物园里的一株植物，你更愿意是：",
+                options: [
+                    { text: "肆意生长的藤蔓，热情地将不同的花架连结在一起。", scores: { CHAT: 1, ANGEL: 1 } },
+                    { text: "深深扎根泥土的古老乔木，不争艳，但记录着岁月的年轮。", scores: {  SOUL: 1 } },
+                    { text: "在极其苛刻的光照和温度下，才会惊艳绽放一晚的稀有兰花。", scores: { ARTIST: 2, WILD: 1 } },
+                    { text: "贴着地面生长的绒草，默默为各种小昆虫提供一片柔软的庇护所。", scores: { ANGEL: 2, SOUL: 1 } }
+                ]
+            },
+            {
+                question: "19. 一位画师想要画出你身上的“气场颜色”，你觉得画面中占据主导的会是：",
+                options: [
+                    { text: "温暖、包容、能让人感到安全的琥珀色或鹅黄色。", scores: { ANGEL: 2 } },
+                    { text: "明艳、高饱和度、让人一眼就能记住的霓虹色系。", scores: { GLOW: 1, CHAT: 1 } },
+                    { text: "由无数种低饱和度色彩叠加成的、优雅而又难以定义的马卡龙色。", scores: { ARTIST: 1, WILD: 1,GLOW: -1 } },
+                    { text: "仿佛流动的数据流，闪烁着冷峻光芒的赛博朋克蓝。", scores: { LINK: 2, WISER: 1 } }
+                ]
+            },
+            {
+                question: "20. 假设你陷入了一个不断循环的梦境，梦境的主题通常会是：",
+                options: [
+                    { text: "穿梭在一条儿时长街，寻找一种记忆中的气味与声音。", scores: { TASTE: 2, WILD: 1 } },
+                    { text: "在一个错综复杂的迷宫里，但你总能奇迹般地掌握所有捷径和出口。", scores: { LINK: 2, WISER: 1 } },
+                    { text: "在某个危急时刻，你总能化身主角，成功接住一个坠落的脆弱生命。", scores: { ANGEL: 2, GLOW: 1 } },
+                    { text: "站在一个没有剧本的舞台上，灯光亮起，一切全凭你即兴发挥。", scores: { ARTIST: 2, CHAT: 1 } }
+                ]
+            }
+        ];
+
+        // --- 逻辑控制区 ---
+        let currentQuestionIndex = 0;
+
+        // 点击开始
+        function startQuiz() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('question-screen').classList.remove('hidden');
+            renderQuestion();
+        }
+
+        // 渲染题目
+        function renderQuestion() {
+            const q = questions[currentQuestionIndex];
+            document.getElementById('progress-text').innerText = `${currentQuestionIndex + 1} / ${questions.length}`;
+            document.getElementById('question-text').innerText = q.question;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = ''; // 清空上一题的选项
+
+            q.options.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.innerText = option.text;
+                // 将该选项的多重分数对象传给点击事件
+                button.onclick = () => handleOptionClick(option.scores);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        // 处理选项点击与加分
+        function handleOptionClick(optionScores) {
+            // 遍历当前选项的 scores 对象，给对应的人格加上指定的分数
+            for (const [personality, points] of Object.entries(optionScores)) {
+                if (scores[personality] !== undefined) {
+                    scores[personality] += points;
+                }
+            }
+            
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex < questions.length) {
+                renderQuestion(); // 渲染下一题
+            } else {
+                showResult(); // 没题了，计算最终结果
+            }
+        }
+
+        // 计算结果并展示
+        function showResult() {
+            let maxScore = -1;
+            let topPersonalities = []; 
+
+            // 1. 遍历分数对象，找出最高分（可能存在平局）
+            for (const [personality, score] of Object.entries(scores)) {
+                if (score > maxScore) {
+                    maxScore = score;
+                    topPersonalities = [personality]; // 发现更高的分数，重置最高分数组
+                } else if (score === maxScore) {
+                    topPersonalities.push(personality); // 如果分数一样，加入平局数组
+                }
+            }
+
+            // 2. 平局打破机制：如果出现并列第一，随机抽取一个作为最终结果
+            const randomInx = Math.floor(Math.random() * topPersonalities.length);
+            const finalPersonality = topPersonalities[randomInx];
+
+            // 3. 切换页面展示结果图
+            document.getElementById('question-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            document.getElementById('result-image').src = resultImages[finalPersonality];
+        }
+    </script>
+</body>
+</html>
