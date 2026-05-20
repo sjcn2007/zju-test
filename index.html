@@ -75,6 +75,16 @@
         #result-screen { text-align: center; width: 100%; animation: fadeIn 0.8s ease;}
         .result-tip { font-size: 15px; color: #003f88; margin-bottom: 20px; font-weight: bold; animation: pulse 2s infinite;}
         #result-image { width: 100%; max-width: 400px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); display: block; margin: 0 auto; }
+        
+        /* 结果页底部声明样式 */
+        .footer-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 35px;
+            line-height: 1.8;
+            letter-spacing: 0.5px;
+        }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
     </style>
@@ -101,6 +111,11 @@
         <div id="result-screen" class="hidden">
             <div class="result-tip">👇 长按保存下方专属海报，分享此刻👇</div>
             <img id="result-image" src="" alt="你的测试结果正在生成...">
+            
+            <div class="footer-text">
+                网站由浙江大学学生会融媒体中心制作<br>
+                最终解释权归浙江大学学生会融媒体中心所有
+            </div>
         </div>
     </div>
 
